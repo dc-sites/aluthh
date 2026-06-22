@@ -10,7 +10,6 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// ===== CONFIG =====
 const ADMIN_PASSWORD = 'admin123'; // Change this!
 
 const loginScreen = document.getElementById('loginScreen');
@@ -23,8 +22,6 @@ const shareModal = document.getElementById('shareModal');
 const shareModalClose = document.getElementById('shareModalClose');
 const shareOptions = document.getElementById('shareOptions');
 const toast = document.getElementById('toast');
-
-let postCount = 0;
 
 // ===== TOAST =====
 function showToast(message, type = 'success') {
@@ -49,13 +46,11 @@ document.getElementById('adminPassword').addEventListener('keypress', (e) => {
   if (e.key === 'Enter') loginBtn.click();
 });
 
-// ===== LOGOUT =====
 logoutBtn.addEventListener('click', () => {
   sessionStorage.removeItem('aluth_ewa_admin');
   location.reload();
 });
 
-// ===== CHECK SESSION =====
 function showAdminPanel() {
   loginScreen.style.display = 'none';
   adminPanel.style.display = 'block';
@@ -72,7 +67,7 @@ function formatDate(timestamp) {
   return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-// ===== GET SHARE URL =====
+// ===== SHARE URL =====
 function getShareUrl(postId) {
   const baseUrl = window.location.origin + window.location.pathname.replace('admin.html', 'index.html');
   return `${baseUrl}?movie=${postId}`;
@@ -85,37 +80,30 @@ function shareMovie(movie) {
   
   shareOptions.innerHTML = `
     <a href="https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}" target="_blank" class="share-option whatsapp">
-      <i class="fa-brands fa-whatsapp"></i>
-      <span>WhatsApp</span>
+      <i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span>
     </a>
     <a href="https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}" target="_blank" class="share-option telegram">
-      <i class="fa-brands fa-telegram"></i>
-      <span>Telegram</span>
+      <i class="fa-brands fa-telegram"></i><span>Telegram</span>
     </a>
     <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}" target="_blank" class="share-option facebook">
-      <i class="fa-brands fa-facebook"></i>
-      <span>Facebook</span>
+      <i class="fa-brands fa-facebook"></i><span>Facebook</span>
     </a>
     <a href="https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}" target="_blank" class="share-option twitter">
-      <i class="fa-brands fa-twitter"></i>
-      <span>Twitter</span>
+      <i class="fa-brands fa-twitter"></i><span>Twitter</span>
     </a>
     <a href="mailto:?subject=${encodeURIComponent(movie.title)}&body=${encodeURIComponent(shareText + ' ' + shareUrl)}" class="share-option email">
-      <i class="fa-solid fa-envelope"></i>
-      <span>Email</span>
+      <i class="fa-solid fa-envelope"></i><span>Email</span>
     </a>
     <div class="share-option copy" onclick="window.copyShareLink('${shareUrl}')">
-      <i class="fa-solid fa-copy"></i>
-      <span>Copy Link</span>
+      <i class="fa-solid fa-copy"></i><span>Copy Link</span>
     </div>
   `;
-  
   shareModal.classList.add('active');
 }
 
 window.copyShareLink = (url) => {
   navigator.clipboard.writeText(url).then(() => {
-    showToast('Link copied to clipboard!', 'success');
+    showToast('Link copied!', 'success');
     shareModal.classList.remove('active');
   });
 };
@@ -129,23 +117,22 @@ shareModal.addEventListener('click', (e) => {
 addMovieForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   
+  const category = document.getElementById('movieCategory').value.trim();
   const title = document.getElementById('movieTitle').value.trim();
   const description = document.getElementById('movieDesc').value.trim();
   const fileLink = document.getElementById('movieFileLink').value.trim();
   const adLink = document.getElementById('movieAdLink').value.trim();
   const thumbnail = document.getElementById('movieThumb').value.trim();
 
-  if (!description || !fileLink || !adLink) {
+  if (!category || !title || !description || !fileLink || !adLink) {
     showToast('Please fill all required fields', 'error');
     return;
   }
 
-  // Auto-generate title if empty
-  const finalTitle = title || `Video ${String(postCount + 1).padStart(2, '0')}`;
-
   try {
     await addDoc(collection(db, 'posts'), {
-      title: finalTitle,
+      category,
+      title,
       description,
       fileLink,
       adLink,
@@ -162,13 +149,27 @@ addMovieForm.addEventListener('submit', async (e) => {
   }
 });
 
-// ===== LOAD POSTS =====
+// ===== GROUP MOVIES BY CATEGORY =====
+function groupByCategory(movies) {
+  const groups = {};
+  movies.forEach(movie => {
+    const cat = movie.category || 'Uncategorized';
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(movie);
+  });
+  return groups;
+}
+
+// ===== LOAD POSTS (Grouped by Category) =====
 const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
 
 onSnapshot(q, (snapshot) => {
-  postCount = snapshot.size;
+  const allPosts = snapshot.docs.map(docSnap => ({
+    id: docSnap.id,
+    ...docSnap.data()
+  }));
   
-  if (snapshot.empty) {
+  if (allPosts.length === 0) {
     postsList.innerHTML = `
       <div class="empty-state">
         <i class="fa-solid fa-inbox"></i>
@@ -178,28 +179,37 @@ onSnapshot(q, (snapshot) => {
     return;
   }
 
-  postsList.innerHTML = snapshot.docs.map(docSnap => {
-    const data = docSnap.data();
+  const groups = groupByCategory(allPosts);
+  const categoryNames = Object.keys(groups).sort();
+
+  postsList.innerHTML = categoryNames.map(cat => {
+    const movies = groups[cat];
     return `
-      <div class="post-item">
-        <div class="post-info">
-          <h4><i class="fa-solid fa-film"></i> ${data.title}</h4>
-          <p>${data.description}</p>
-          <p style="margin-top:5px; font-size:11px;">
-            <i class="fa-regular fa-calendar"></i> ${formatDate(data.createdAt)} 
-            <i class="fa-solid fa-eye" style="margin-left:10px;"></i> ${data.views || 0} views
-          </p>
+      <div class="category-group">
+        <div class="category-group-header">
+          <h4><i class="fa-solid fa-folder"></i> ${cat}</h4>
+          <span class="badge">${movies.length} movies</span>
         </div>
-        <div class="post-actions">
-          <button class="icon-btn share" onclick="window.sharePostGlobal('${docSnap.id}')" title="Share">
-            <i class="fa-solid fa-share-nodes"></i>
-          </button>
-          <button class="icon-btn copy" onclick="window.copyLink('${data.fileLink}')" title="Copy File Link">
-            <i class="fa-solid fa-copy"></i>
-          </button>
-          <button class="icon-btn delete" onclick="window.deletePost('${docSnap.id}')" title="Delete">
-            <i class="fa-solid fa-trash"></i>
-          </button>
+        <div class="category-group-body">
+          ${movies.map(movie => `
+            <div class="post-item">
+              <div class="post-info">
+                <h5><i class="fa-solid fa-film"></i> ${movie.title}</h5>
+                <p>${movie.description}</p>
+              </div>
+              <div class="post-actions">
+                <button class="icon-btn share" onclick="window.sharePostGlobal('${movie.id}', '${movie.title.replace(/'/g, "\\'")}', '${movie.description.replace(/'/g, "\\'")}')" title="Share">
+                  <i class="fa-solid fa-share-nodes"></i>
+                </button>
+                <button class="icon-btn copy" onclick="window.copyLink('${movie.fileLink}')" title="Copy Link">
+                  <i class="fa-solid fa-copy"></i>
+                </button>
+                <button class="icon-btn delete" onclick="window.deletePost('${movie.id}')" title="Delete">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          `).join('')}
         </div>
       </div>
     `;
@@ -225,14 +235,6 @@ window.copyLink = (link) => {
 };
 
 // ===== SHARE POST =====
-window.sharePostGlobal = (postId) => {
-  const movie = { id: postId, title: 'Movie', description: '' };
-  // Find movie data from the list
-  const postItem = document.querySelector(`[onclick*="${postId}"]`);
-  if (postItem) {
-    const postInfo = postItem.closest('.post-item').querySelector('.post-info');
-    movie.title = postInfo.querySelector('h4').textContent.trim();
-    movie.description = postInfo.querySelector('p').textContent.trim();
-  }
-  shareMovie(movie);
+window.sharePostGlobal = (postId, title, description) => {
+  shareMovie({ id: postId, title, description });
 };
