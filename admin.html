@@ -45,9 +45,13 @@
       <h3><i class="fa-solid fa-plus-circle"></i> Add New Movie</h3>
       <form id="addMovieForm">
         <div class="form-group">
+          <label><i class="fa-solid fa-folder"></i> Category</label>
+          <input type="text" id="movieCategory" placeholder="e.g., Video 01, Action, New Release" required />
+          <small>Group movies under this category</small>
+        </div>
+        <div class="form-group">
           <label><i class="fa-solid fa-heading"></i> Title</label>
-          <input type="text" id="movieTitle" placeholder="Auto (Video 01, Video 02...)" />
-          <small>Leave empty for auto naming</small>
+          <input type="text" id="movieTitle" placeholder="Movie title" required />
         </div>
         <div class="form-group">
           <label><i class="fa-solid fa-align-left"></i> Description</label>
@@ -71,9 +75,9 @@
       </form>
     </div>
 
-    <!-- POSTS LIST -->
+    <!-- CATEGORIES LIST -->
     <div class="admin-card">
-      <h3><i class="fa-solid fa-list"></i> Uploaded Movies</h3>
+      <h3><i class="fa-solid fa-layer-group"></i> Categories & Movies</h3>
       <div class="posts-list" id="postsList">
         <div class="loader"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>
       </div>
@@ -87,7 +91,7 @@
     <button class="modal-close" id="shareModalClose"><i class="fa-solid fa-xmark"></i></button>
     <div class="modal-body">
       <h3 style="text-align:center; margin-bottom:20px;">
-        <i class="fa-solid fa-share-nodes" style="color:var(--accent);"></i> Share Movie
+        <i class="fa-solid fa-share-nodes" style="color:var(--accent);"></i> Share
       </h3>
       <div class="share-options" id="shareOptions"></div>
     </div>
