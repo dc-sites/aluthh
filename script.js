@@ -9,9 +9,15 @@ import {
   increment
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+const categoriesView = document.getElementById('categoriesView');
+const moviesView = document.getElementById('moviesView');
+const categoriesGrid = document.getElementById('categoriesGrid');
 const moviesGrid = document.getElementById('moviesGrid');
+const categoryCount = document.getElementById('categoryCount');
+const categoryTitle = document.getElementById('categoryTitle');
+const movieCount = document.getElementById('movieCount');
+const backBtn = document.getElementById('backBtn');
 const searchInput = document.getElementById('searchInput');
-const totalMoviesEl = document.getElementById('totalMovies');
 const modal = document.getElementById('movieModal');
 const modalBody = document.getElementById('modalBody');
 const modalClose = document.getElementById('modalClose');
@@ -21,6 +27,7 @@ const shareOptions = document.getElementById('shareOptions');
 const toast = document.getElementById('toast');
 
 let allMovies = [];
+let currentCategory = null;
 
 // ===== SECRET ADMIN ACCESS (Click logo 5 times) =====
 let logoClickCount = 0;
@@ -29,18 +36,14 @@ let logoClickTimer = null;
 document.getElementById('logoClick').addEventListener('click', (e) => {
   e.preventDefault();
   logoClickCount++;
-  
   clearTimeout(logoClickTimer);
-  logoClickTimer = setTimeout(() => {
-    logoClickCount = 0;
-  }, 2000);
-  
+  logoClickTimer = setTimeout(() => { logoClickCount = 0; }, 2000);
   if (logoClickCount >= 5) {
     window.location.href = 'admin.html';
   }
 });
 
-// ===== SHOW TOAST =====
+// ===== TOAST =====
 function showToast(message, type = 'success') {
   const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
   toast.innerHTML = `<i class="fa-solid ${icon}"></i> ${message}`;
@@ -48,7 +51,7 @@ function showToast(message, type = 'success') {
   setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-// ===== GET CLICK COUNT =====
+// ===== CLICK COUNT =====
 function getClickCount(postId) {
   return parseInt(localStorage.getItem(`clicks_${postId}`) || '0');
 }
@@ -77,37 +80,30 @@ function shareMovie(movie) {
   
   shareOptions.innerHTML = `
     <a href="https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}" target="_blank" class="share-option whatsapp">
-      <i class="fa-brands fa-whatsapp"></i>
-      <span>WhatsApp</span>
+      <i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span>
     </a>
     <a href="https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}" target="_blank" class="share-option telegram">
-      <i class="fa-brands fa-telegram"></i>
-      <span>Telegram</span>
+      <i class="fa-brands fa-telegram"></i><span>Telegram</span>
     </a>
     <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}" target="_blank" class="share-option facebook">
-      <i class="fa-brands fa-facebook"></i>
-      <span>Facebook</span>
+      <i class="fa-brands fa-facebook"></i><span>Facebook</span>
     </a>
     <a href="https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}" target="_blank" class="share-option twitter">
-      <i class="fa-brands fa-twitter"></i>
-      <span>Twitter</span>
+      <i class="fa-brands fa-twitter"></i><span>Twitter</span>
     </a>
     <a href="mailto:?subject=${encodeURIComponent(movie.title)}&body=${encodeURIComponent(shareText + ' ' + shareUrl)}" class="share-option email">
-      <i class="fa-solid fa-envelope"></i>
-      <span>Email</span>
+      <i class="fa-solid fa-envelope"></i><span>Email</span>
     </a>
     <div class="share-option copy" onclick="window.copyShareLink('${shareUrl}')">
-      <i class="fa-solid fa-copy"></i>
-      <span>Copy Link</span>
+      <i class="fa-solid fa-copy"></i><span>Copy Link</span>
     </div>
   `;
-  
   shareModal.classList.add('active');
 }
 
 window.copyShareLink = (url) => {
   navigator.clipboard.writeText(url).then(() => {
-    showToast('Link copied to clipboard!', 'success');
+    showToast('Link copied!', 'success');
     shareModal.classList.remove('active');
   });
 };
@@ -117,14 +113,123 @@ shareModal.addEventListener('click', (e) => {
   if (e.target === shareModal) shareModal.classList.remove('active');
 });
 
+// ===== GROUP MOVIES BY CATEGORY =====
+function groupByCategory(movies) {
+  const groups = {};
+  movies.forEach(movie => {
+    const cat = movie.category || 'Uncategorized';
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(movie);
+  });
+  return groups;
+}
+
+// ===== CATEGORY ICONS (rotate through) =====
+const categoryIcons = [
+  'fa-film', 'fa-clapperboard', 'fa-video', 'fa-photo-film',
+  'fa-star', 'fa-fire', 'fa-bolt', 'fa-crown'
+];
+
+function getCategoryIcon(categoryName) {
+  // Simple hash to pick consistent icon
+  let hash = 0;
+  for (let i = 0; i < categoryName.length; i++) {
+    hash = (hash * 31 + categoryName.charCodeAt(i)) | 0;
+  }
+  return categoryIcons[Math.abs(hash) % categoryIcons.length];
+}
+
+// ===== RENDER CATEGORIES =====
+function renderCategories(movies, searchTerm = '') {
+  const groups = groupByCategory(movies);
+  const categoryNames = Object.keys(groups).sort();
+
+  // Filter by search
+  const filtered = searchTerm
+    ? categoryNames.filter(cat =>
+        cat.toLowerCase().includes(searchTerm) ||
+        groups[cat].some(m =>
+          m.title.toLowerCase().includes(searchTerm) ||
+          m.description.toLowerCase().includes(searchTerm)
+        )
+      )
+    : categoryNames;
+
+  if (filtered.length === 0) {
+    categoriesGrid.innerHTML = `
+      <div class="empty-state" style="grid-column: 1/-1;">
+        <i class="fa-solid fa-folder-open"></i>
+        <h3>No categories found</h3>
+        <p>${searchTerm ? 'Try a different search' : 'Check back soon!'}</p>
+      </div>`;
+    categoryCount.textContent = '0 categories';
+    return;
+  }
+
+  categoryCount.textContent = `${filtered.length} ${filtered.length === 1 ? 'category' : 'categories'} available`;
+
+  categoriesGrid.innerHTML = filtered.map(cat => {
+    const count = groups[cat].length;
+    const icon = getCategoryIcon(cat);
+    return `
+      <div class="category-card" data-category="${cat}">
+        <div class="category-icon">
+          <i class="fa-solid ${icon}"></i>
+        </div>
+        <div class="category-name">${cat}</div>
+        <div class="category-count">
+          <i class="fa-solid fa-film"></i> ${count} ${count === 1 ? 'movie' : 'movies'}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Attach click handlers
+  document.querySelectorAll('.category-card').forEach(card => {
+    card.addEventListener('click', () => {
+      openCategory(card.dataset.category);
+    });
+  });
+}
+
+// ===== OPEN CATEGORY =====
+function openCategory(categoryName) {
+  currentCategory = categoryName;
+  const groups = groupByCategory(allMovies);
+  const movies = groups[categoryName] || [];
+
+  categoryTitle.innerHTML = `<i class="fa-solid ${getCategoryIcon(categoryName)}"></i> ${categoryName}`;
+  movieCount.textContent = `${movies.length} ${movies.length === 1 ? 'movie' : 'movies'}`;
+
+  renderMovies(movies);
+
+  categoriesView.style.display = 'none';
+  moviesView.style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Update URL
+  const url = new URL(window.location);
+  url.searchParams.set('category', categoryName);
+  window.history.pushState({}, '', url);
+}
+
+// ===== BACK TO CATEGORIES =====
+backBtn.addEventListener('click', () => {
+  currentCategory = null;
+  categoriesView.style.display = 'block';
+  moviesView.style.display = 'none';
+  const url = new URL(window.location);
+  url.searchParams.delete('category');
+  window.history.pushState({}, '', url);
+});
+
 // ===== RENDER MOVIES =====
 function renderMovies(movies) {
   if (movies.length === 0) {
     moviesGrid.innerHTML = `
       <div class="empty-state" style="grid-column: 1/-1;">
         <i class="fa-solid fa-film"></i>
-        <h3>No movies yet</h3>
-        <p>Check back soon for new releases!</p>
+        <h3>No movies</h3>
       </div>`;
     return;
   }
@@ -132,12 +237,11 @@ function renderMovies(movies) {
   moviesGrid.innerHTML = movies.map(movie => {
     const clicks = getClickCount(movie.id);
     const btnClass = clicks === 1 ? 'watch-btn clicked' : 'watch-btn';
-    const btnText = clicks === 1 
-      ? '<i class="fa-solid fa-play"></i> Watch Now' 
+    const btnText = clicks === 1
+      ? '<i class="fa-solid fa-play"></i> Watch Now <small>(Click again)</small>'
       : '<i class="fa-solid fa-play"></i> Watch Now';
-    const btnHint = clicks === 1 ? ' (Click again to watch)' : '';
 
-    const thumbHtml = movie.thumbnail 
+    const thumbHtml = movie.thumbnail
       ? `<img src="${movie.thumbnail}" alt="${movie.title}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><i class="fa-solid fa-film placeholder-icon" style="display:none"></i>`
       : `<i class="fa-solid fa-film placeholder-icon"></i>`;
 
@@ -156,9 +260,7 @@ function renderMovies(movies) {
             <span><i class="fa-regular fa-calendar"></i> ${formatDate(movie.createdAt)}</span>
             <span><i class="fa-solid fa-eye"></i> ${movie.views || 0}</span>
           </div>
-          <button class="${btnClass}" data-id="${movie.id}">
-            ${btnText}${btnHint}
-          </button>
+          <button class="${btnClass}" data-id="${movie.id}">${btnText}</button>
           <button class="share-btn" data-id="${movie.id}">
             <i class="fa-solid fa-share-nodes"></i> Share
           </button>
@@ -167,7 +269,7 @@ function renderMovies(movies) {
     `;
   }).join('');
 
-  // Attach click handlers
+  // Handlers
   document.querySelectorAll('.watch-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -188,7 +290,7 @@ function renderMovies(movies) {
   });
 }
 
-// ===== HANDLE WATCH CLICK (2-CLICK SYSTEM) =====
+// ===== HANDLE WATCH CLICK =====
 function handleWatchClick(postId) {
   const movie = allMovies.find(m => m.id === postId);
   if (!movie) return;
@@ -197,12 +299,9 @@ function handleWatchClick(postId) {
   clicks++;
 
   if (clicks === 1) {
-    // FIRST CLICK → Open Ad Link
     setClickCount(postId, 1);
-    showToast('<i class="fa-solid fa-bullhorn"></i> Please wait... opening sponsor', 'success');
+    showToast('Opening sponsor...', 'success');
     window.open(movie.adLink, '_blank');
-    
-    // Update button appearance
     setTimeout(() => {
       const btn = document.querySelector(`.watch-btn[data-id="${postId}"]`);
       if (btn) {
@@ -210,29 +309,23 @@ function handleWatchClick(postId) {
         btn.innerHTML = '<i class="fa-solid fa-play"></i> Watch Now <small>(Click again)</small>';
       }
     }, 500);
-
-    // Increment views in Firebase
-    try {
-      updateDoc(doc(db, 'posts', postId), { views: increment(1) });
-    } catch (e) { console.log(e); }
-
+    try { updateDoc(doc(db, 'posts', postId), { views: increment(1) }); } catch (e) {}
   } else if (clicks >= 2) {
-    // SECOND CLICK → Open Actual File Link
-    setClickCount(postId, 0); // Reset
+    setClickCount(postId, 0);
     window.open(movie.fileLink, '_blank');
-    showToast('<i class="fa-solid fa-check"></i> Enjoy the movie!', 'success');
+    showToast('Enjoy the movie!', 'success');
   }
 }
 
-// ===== OPEN MODAL =====
+// ===== MODAL =====
 function openModal(postId) {
   const movie = allMovies.find(m => m.id === postId);
   if (!movie) return;
 
   const clicks = getClickCount(postId);
-  const statusHtml = clicks === 1 
-    ? '<span style="color:#228b22"><i class="fa-solid fa-check-circle"></i> Ready to watch - Click Watch Now</span>'
-    : '<span style="color:var(--accent)"><i class="fa-solid fa-info-circle"></i> Click Watch Now to begin</span>';
+  const statusHtml = clicks === 1
+    ? '<span style="color:#228b22"><i class="fa-solid fa-check-circle"></i> Ready to watch</span>'
+    : '<span style="color:var(--accent)"><i class="fa-solid fa-info-circle"></i> Click Watch Now</span>';
 
   modalBody.innerHTML = `
     <div style="text-align:center; margin-bottom:20px;">
@@ -241,6 +334,10 @@ function openModal(postId) {
     <h2 style="text-align:center; margin-bottom:15px;">${movie.title}</h2>
     <p style="color:var(--text-secondary); line-height:1.7; margin-bottom:20px;">${movie.description}</p>
     <div style="background:var(--bg-darker); padding:15px; border-radius:10px; margin-bottom:20px;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+        <span><i class="fa-solid fa-folder"></i> Category:</span>
+        <strong>${movie.category || 'Uncategorized'}</strong>
+      </div>
       <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
         <span><i class="fa-regular fa-calendar"></i> Added:</span>
         <strong>${formatDate(movie.createdAt)}</strong>
@@ -255,7 +352,7 @@ function openModal(postId) {
       <i class="fa-solid fa-play"></i> Watch Now
     </button>
     <button class="share-btn" onclick="window.shareMovieGlobal('${movie.id}')" style="width:100%;">
-      <i class="fa-solid fa-share-nodes"></i> Share Movie
+      <i class="fa-solid fa-share-nodes"></i> Share
     </button>
   `;
   modal.classList.add('active');
@@ -274,15 +371,50 @@ modal.addEventListener('click', (e) => {
 
 // ===== SEARCH =====
 searchInput.addEventListener('input', (e) => {
-  const term = e.target.value.toLowerCase();
-  const filtered = allMovies.filter(m =>
-    m.title.toLowerCase().includes(term) ||
-    m.description.toLowerCase().includes(term)
-  );
-  renderMovies(filtered);
+  const term = e.target.value.toLowerCase().trim();
+  if (currentCategory) {
+    // Search within category
+    const groups = groupByCategory(allMovies);
+    const movies = (groups[currentCategory] || []).filter(m =>
+      m.title.toLowerCase().includes(term) ||
+      m.description.toLowerCase().includes(term)
+    );
+    renderMovies(movies);
+    movieCount.textContent = `${movies.length} ${movies.length === 1 ? 'movie' : 'movies'}`;
+  } else {
+    // Search categories
+    renderCategories(allMovies, term);
+  }
 });
 
-// ===== LOAD MOVIES FROM FIREBASE =====
+// ===== HANDLE URL PARAMS =====
+function handleUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  const category = params.get('category');
+  const movieId = params.get('movie');
+
+  if (movieId) {
+    // Wait for data to load, then open modal
+    const checkMovie = setInterval(() => {
+      const movie = allMovies.find(m => m.id === movieId);
+      if (movie) {
+        clearInterval(checkMovie);
+        // Open its category first
+        if (movie.category) openCategory(movie.category);
+        setTimeout(() => openModal(movieId), 300);
+      }
+    }, 100);
+  } else if (category) {
+    const checkCategory = setInterval(() => {
+      if (allMovies.length > 0 || categoriesGrid.innerHTML !== '') {
+        clearInterval(checkCategory);
+        openCategory(category);
+      }
+    }, 100);
+  }
+}
+
+// ===== LOAD FROM FIREBASE =====
 const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
 
 onSnapshot(q, (snapshot) => {
@@ -290,14 +422,27 @@ onSnapshot(q, (snapshot) => {
     id: doc.id,
     ...doc.data()
   }));
-  totalMoviesEl.textContent = allMovies.length;
-  renderMovies(allMovies);
+  renderCategories(allMovies);
+  handleUrlParams();
 }, (error) => {
   console.error('Firebase error:', error);
-  moviesGrid.innerHTML = `
+  categoriesGrid.innerHTML = `
     <div class="empty-state" style="grid-column:1/-1;">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <h3>Connection Error</h3>
-      <p>Please check your Firebase configuration.</p>
+      <p>Check Firebase configuration</p>
     </div>`;
+});
+
+// Handle browser back/forward
+window.addEventListener('popstate', () => {
+  const params = new URLSearchParams(window.location.search);
+  const category = params.get('category');
+  if (category) {
+    openCategory(category);
+  } else {
+    currentCategory = null;
+    categoriesView.style.display = 'block';
+    moviesView.style.display = 'none';
+  }
 });
