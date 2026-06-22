@@ -13,82 +13,52 @@
 <!-- NAVBAR -->
 <nav class="navbar">
   <div class="nav-container">
-    <a href="#" class="logo" id="logoClick">
+    <a href="index.html" class="logo" id="logoClick">
       <i class="fa-solid fa-film"></i>
       <span>ALUTH <span class="accent">EWA</span></span>
     </a>
-    <ul class="nav-links">
-      <li><a href="#home"><i class="fa-solid fa-house"></i> Home</a></li>
-      <li><a href="#movies"><i class="fa-solid fa-clapperboard"></i> Movies</a></li>
-      <li><a href="#about"><i class="fa-solid fa-circle-info"></i> About</a></li>
-    </ul>
     <div class="search-box">
       <i class="fa-solid fa-magnifying-glass"></i>
-      <input type="text" id="searchInput" placeholder="Search movies..." />
+      <input type="text" id="searchInput" placeholder="Search..." />
     </div>
   </div>
 </nav>
 
-<!-- HERO -->
+<!-- HERO (Simplified) -->
 <section class="hero" id="home">
-  <div class="hero-overlay"></div>
   <div class="hero-content">
-    <span class="hero-tag"><i class="fa-solid fa-fire"></i> TRENDING NOW</span>
-    <h1>Welcome to <span class="accent">ALUTH EWA</span></h1>
-    <p>Stream the latest movies in high quality. New releases added daily.</p>
-    <a href="#movies" class="btn-primary">
-      <i class="fa-solid fa-play"></i> Browse Movies
-    </a>
+    <h1>ALUTH <span class="accent">EWA</span></h1>
+    <p>Stream the latest movies in high quality</p>
   </div>
 </section>
 
-<!-- FEATURED STATS -->
-<section class="stats">
-  <div class="stat-card">
-    <i class="fa-solid fa-film"></i>
-    <h3 id="totalMovies">0</h3>
-    <p>Movies</p>
-  </div>
-  <div class="stat-card">
-    <i class="fa-solid fa-users"></i>
-    <h3>10K+</h3>
-    <p>Viewers</p>
-  </div>
-  <div class="stat-card">
-    <i class="fa-solid fa-star"></i>
-    <h3>HD</h3>
-    <p>Quality</p>
-  </div>
-  <div class="stat-card">
-    <i class="fa-solid fa-bolt"></i>
-    <h3>24/7</h3>
-    <p>Available</p>
-  </div>
-</section>
-
-<!-- MOVIES GRID -->
-<section class="movies-section" id="movies">
-  <div class="section-header">
-    <h2><i class="fa-solid fa-clapperboard"></i> Latest Movies</h2>
-    <p>Click once to support us, click again to watch</p>
-  </div>
-  <div class="movies-grid" id="moviesGrid">
-    <div class="loader"><i class="fa-solid fa-spinner fa-spin"></i> Loading movies...</div>
-  </div>
-</section>
-
-<!-- ABOUT -->
-<section class="about" id="about">
-  <div class="about-content">
-    <h2><i class="fa-solid fa-circle-info"></i> About ALUTH EWA</h2>
-    <p>ALUTH EWA is your ultimate destination for streaming the latest movies in high quality. We bring you fresh content daily with an easy-to-use interface.</p>
-    <div class="about-features">
-      <div class="feature"><i class="fa-solid fa-shield-halved"></i><span>Safe Streaming</span></div>
-      <div class="feature"><i class="fa-solid fa-bolt"></i><span>Fast Access</span></div>
-      <div class="feature"><i class="fa-solid fa-mobile-screen"></i><span>Mobile Friendly</span></div>
+<!-- MAIN CONTENT -->
+<main class="main-content">
+  
+  <!-- CATEGORIES VIEW -->
+  <section class="categories-section" id="categoriesView">
+    <div class="section-header">
+      <h2><i class="fa-solid fa-layer-group"></i> Categories</h2>
+      <p id="categoryCount">Loading categories...</p>
     </div>
-  </div>
-</section>
+    <div class="categories-grid" id="categoriesGrid">
+      <div class="loader"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>
+    </div>
+  </section>
+
+  <!-- MOVIES VIEW (inside category) -->
+  <section class="movies-section" id="moviesView" style="display:none;">
+    <div class="section-header">
+      <button class="back-btn" id="backBtn">
+        <i class="fa-solid fa-arrow-left"></i> Back to Categories
+      </button>
+      <h2 id="categoryTitle"><i class="fa-solid fa-folder-open"></i> Category</h2>
+      <p id="movieCount">0 movies</p>
+    </div>
+    <div class="movies-grid" id="moviesGrid"></div>
+  </section>
+
+</main>
 
 <!-- FOOTER -->
 <footer class="footer">
@@ -120,7 +90,7 @@
     <button class="modal-close" id="shareModalClose"><i class="fa-solid fa-xmark"></i></button>
     <div class="modal-body">
       <h3 style="text-align:center; margin-bottom:20px;">
-        <i class="fa-solid fa-share-nodes" style="color:var(--accent);"></i> Share Movie
+        <i class="fa-solid fa-share-nodes" style="color:var(--accent);"></i> Share
       </h3>
       <div class="share-options" id="shareOptions"></div>
     </div>
