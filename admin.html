@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ALUTH EWA - Admin Panel</title>
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="admin-body">
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo"><i class="fa-solid fa-lock"></i></div>
+    <h2>Admin Login</h2>
+    <p>Enter password to access panel</p>
+    <div class="input-group">
+      <i class="fa-solid fa-key"></i>
+      <input type="password" id="adminPassword" placeholder="Password" />
+    </div>
+    <button class="btn-primary" id="loginBtn">
+      <i class="fa-solid fa-right-to-bracket"></i> Login
+    </button>
+    <p class="login-hint">Default: admin123</p>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="admin-panel" id="adminPanel" style="display:none;">
+  <nav class="admin-nav">
+    <div class="admin-logo">
+      <i class="fa-solid fa-film"></i>
+      <span>ALUTH EWA <small>Admin</small></span>
+    </div>
+    <button class="btn-danger" id="logoutBtn">
+      <i class="fa-solid fa-right-from-bracket"></i> Logout
+    </button>
+  </nav>
+
+  <div class="admin-container">
+    <!-- ADD MOVIE FORM -->
+    <div class="admin-card">
+      <h3><i class="fa-solid fa-plus-circle"></i> Add New Movie</h3>
+      <form id="addMovieForm">
+        <div class="form-group">
+          <label><i class="fa-solid fa-heading"></i> Title</label>
+          <input type="text" id="movieTitle" placeholder="Auto (Video 01, Video 02...)" />
+          <small>Leave empty for auto naming</small>
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-align-left"></i> Description</label>
+          <textarea id="movieDesc" placeholder="Movie description..." rows="3" required></textarea>
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-link"></i> Telegram Bot File Link</label>
+          <input type="url" id="movieFileLink" placeholder="https://t.me/..." required />
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-bullhorn"></i> Advertisement Link</label>
+          <input type="url" id="movieAdLink" placeholder="https://..." required />
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-image"></i> Thumbnail URL (optional)</label>
+          <input type="url" id="movieThumb" placeholder="https://..." />
+        </div>
+        <button type="submit" class="btn-primary">
+          <i class="fa-solid fa-upload"></i> Upload Movie
+        </button>
+      </form>
+    </div>
+
+    <!-- POSTS LIST -->
+    <div class="admin-card">
+      <h3><i class="fa-solid fa-list"></i> Uploaded Movies</h3>
+      <div class="posts-list" id="postsList">
+        <div class="loader"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div class="modal" id="shareModal">
+  <div class="modal-content share-modal-content">
+    <button class="modal-close" id="shareModalClose"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-body">
+      <h3 style="text-align:center; margin-bottom:20px;">
+        <i class="fa-solid fa-share-nodes" style="color:var(--accent);"></i> Share Movie
+      </h3>
+      <div class="share-options" id="shareOptions"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="admin.js"></script>
+</body>
+</html>
